@@ -52,6 +52,7 @@ namespace BLEConsole
         static ManualResetEvent _notifyCompleteEvent = null;
         static ManualResetEvent _delayEvent = null;
         static bool _primed = false;
+        static bool silentRun = false;
 
         static TimeSpan _timeout = TimeSpan.FromSeconds(3);
 
@@ -127,10 +128,13 @@ namespace BLEConsole
                     Console.Write("BLE: ");
 
                 skipPrompt = false;
-              
+
                 try
                 {
                     var userInput = string.Empty;
+
+                    if (silentRun)
+                        continue;
 
                     // If we're inside "foreach" loop, process saved commands
                     if (_forEachExecution)
@@ -200,6 +204,9 @@ namespace BLEConsole
         {
             switch (cmd)
             {
+                case "silentrun":
+                    silentRun = true;
+                    break;
                 case "if":
                     _inIfBlock++;
                     _exitCode = 0;
@@ -302,7 +309,7 @@ namespace BLEConsole
                 case "open":
                     if (_forEachExecution && _forEachDeviceCounter > 0)
                         parameters = parameters.Replace("$", _forEachDeviceNames[_forEachDeviceCounter - 1]);
-                    
+
                     _exitCode += await OpenDevice(parameters);
                     break;
 
@@ -353,7 +360,7 @@ namespace BLEConsole
                     Unsubscribe(parameters);
                     break;
 
-                    //experimental pairing function 
+                    //experimental pairing function
                 case "pair":
                     PairBluetooth(parameters);
                     break;
@@ -453,7 +460,7 @@ namespace BLEConsole
                     Console.Write(param + CLRF);
                 }
             }
-        
+
             return retVal;
         }
 
@@ -466,7 +473,7 @@ namespace BLEConsole
 
             if (pairingInformation.CanPair)
                 result =  await _selectedDevice.DeviceInformation.Pairing.PairAsync(pairingInformation.ProtectionLevel);
-            
+
         }
 
         static void ChangeDisplayFormat(string param)
@@ -531,7 +538,7 @@ namespace BLEConsole
         /// <param name="param">optional, 'w' means "wide list"</param>
         static void ListDevices(string param)
         {
-            
+
             var names = _deviceList.OrderBy(d => d.Name).Where(d => !string.IsNullOrEmpty(d.Name)).Select(d => d.Name).ToList();
             if (string.IsNullOrEmpty(param))
             {
@@ -643,9 +650,9 @@ namespace BLEConsole
                     try
                     {
                         // only allow for one connection to be open at a time
-                        if (_selectedDevice != null) 
+                        if (_selectedDevice != null)
                             CloseDevice();
-                        
+
                         _selectedDevice = await BluetoothLEDevice.FromIdAsync(foundId).AsTask().TimeoutAfter(_timeout);
                         if (!Console.IsInputRedirected)
                             Console.WriteLine($"Connecting to {_selectedDevice.Name}.");
@@ -734,8 +741,8 @@ namespace BLEConsole
                             var accessStatus = await attr.service.RequestAccessAsync();
                             if (accessStatus == DeviceAccessStatus.Allowed)
                             {
-                                // BT_Code: Get all the child characteristics of a service. Use the cache mode to specify uncached characterstics only 
-                                // and the new Async functions to get the characteristics of unpaired devices as well. 
+                                // BT_Code: Get all the child characteristics of a service. Use the cache mode to specify uncached characterstics only
+                                // and the new Async functions to get the characteristics of unpaired devices as well.
                                 var result = await attr.service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
                                 if (result.Status == GattCommunicationStatus.Success)
                                 {
@@ -807,7 +814,7 @@ namespace BLEConsole
         }
 
         /// <summary>
-        /// This function reads data from the specific BLE characteristic 
+        /// This function reads data from the specific BLE characteristic
         /// </summary>
         /// <param name="param"></param>
         static async Task<int> ReadCharacteristic(string param)
@@ -910,7 +917,7 @@ namespace BLEConsole
         }
 
         /// <summary>
-        /// This function writes data from the specific BLE characteristic 
+        /// This function writes data from the specific BLE characteristic
         /// </summary>
         /// <param name="param">
         /// parameters should be:
@@ -1219,7 +1226,7 @@ namespace BLEConsole
                     _notifyCompleteEvent = null;
                 }
             }
-            else  _primed = true; 
+            else  _primed = true;
         }
 
         static DeviceInformation FindKnownDevice(string deviceId)
